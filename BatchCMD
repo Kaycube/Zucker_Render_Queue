@@ -1,0 +1,43 @@
+#!/bin/bash
+#read -p 'Username: ' userVar 
+read -sp 'Password: ' passVar 
+echo
+read -p 'DPA HOST MACHINE: ' hostVar 
+read -p 'List of machine(eg 1-2): ' listVar 
+read -p 'Batch Command: ' cmdVar 
+
+declare -i min
+declare -i max
+
+#USERNAME=$uservar
+PASSWORD=$passVar
+COMMAND=$cmdVar
+SUDO="sudo"
+
+min=${listVar%-*}
+max=${listVar#*-}
+
+for i in $(eval echo "{$min..$max}")
+do
+	HOST+=("$hostVar${i}.fx.clemson.edu")
+done
+
+for HOSTNAME in "${HOST[@]}"
+do
+	if [ "${cmdVar:0:4}" = "$SUDO" ]
+	then
+		echo
+		echo "I sense a sudo"
+		echo
+		ssh -t ${HOSTNAME} "echo ${passVar} | sudo -S${cmdVar:4}"
+		echo
+	else
+		echo
+		ssh -t ${HOSTNAME} "${COMMAND}"
+		echo
+	fi
+	
+done
+echo "Exiting Sript.."
+echo
+exit

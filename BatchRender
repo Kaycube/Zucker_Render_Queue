@@ -1,0 +1,228 @@
+#!/bin/bash
+
+# *****************************************************
+#              Galen Helfter | Kunta Lowe
+#           ghelfter@gmail.com | kuntakwaku055@gmail.com
+#            batch_render.2.pl| BatchRender
+# *****************************************************
+echo "Welcome to a custom batch render script. This script can also be passed a set of frames to render. This script and its corresponding config files need to be located in you project folder. Follow the command prompts"
+echo
+
+#Batch Render Function
+Batch(){
+	mkdir -p tmp${queueVar}
+	echo "${queueVar}"
+	start=${rangeVar%-*}
+	end=${rangeVar#*-}
+	if [ "${queueVar}" = "${renderMinion}" ]
+	then
+		echo 
+		echo 'Rendering on Minions..'
+		echo
+		#echo "./batch_render.2.pl ${start} ${end} ${ScenePath} ${dirPath} ${layerVar} ./batch_minions.json -sf" >> ${PWD}/tmp${queueVar}/${queueVar}LOG &
+		./batch_render.2.pl ${start} ${end} ${ScenePath} ${dirPath} ${layerVar} ./batch_minions.json -sf > ${PWD}/tmp${queueVar}/${queueVar}LOG &
+		echo
+	elif [ "${queueVar}" = "${renderTroll}" ]
+	then
+		echo 
+		echo 'Rendering on Trolls..'
+		echo
+		#echo "./batch_render.2.pl ${start} ${end} ${ScenePath} ${dirPath} ${layerVar} ./batch_trolls.json -sf" >> ${PWD}/tmp${queueVar}/${queueVar}LOG &
+		./batch_render.2.pl ${start} ${end} ${ScenePath} ${dirPath} ${layerVar} ./batch_trolls.json -sf > ${PWD}/tmp${queueVar}/${queueVar}LOG &
+		echo
+	fi
+}
+
+#Rerender Command Function
+ReRender(){
+	#Setup Render Config files and Run render queue
+
+	if [ "${queueVar}" = "$renderMinion" ]
+	then
+		echo
+		echo 'Rendering on Minions..'
+		echo 
+		for ranges in $(echo $FrameVar | sed "s/;/ /g")
+		do
+			Frames+=($ranges)
+		done
+
+		tmpS=$(cat "${PWD}"/batch_minions.json | jq '.clusters[0].start')
+		tmpE=$(cat "${PWD}"/batch_minions.json | jq '.clusters[0].end')
+
+		startComputer=${tmpS}
+		endComputer=${tmpE}
+
+		if [ "${#Frames[@]}" > "${endComputers}" ]
+		then
+			setOfQueues=1
+			echo "Creating ${#Frames[@]} set of Render Computers"
+			echo
+		elif [ "${Frames[@]}" = "${endComputer}" ]
+		then
+			setOfQueues=1
+			echo "Creating ${#Frames[@]} set of Render Computers"
+			echo
+		else
+			setOfQueues=$((${endComputer} / ${#Frames[@]}))
+			echo "Creating ${#Frames[@]} set of Render Computers"
+			echo
+
+		fi
+
+		#Create Config Files for each missing range of frames
+		mkdir -p tmp${queueVar}
+		for i in "${Frames[@]}"
+		do
+			echo 'Copying batch files...'
+			echo
+			cp -p batch_minions.json ${PWD}/tmp${queueVar}/
+			cd tmp${queueVar}/
+			echo "Renaming batch file for missing frames ${i}"
+			echo
+			mv batch_minions.json batch_minions${i}.json
+			endComputer=$((${startComputer} + $((${setOfQueues} - 1))))
+			jq ".clusters[0].start = ${startComputer}" batch_minions${i}.json > tmp.$$.json && mv tmp.$$.json batch_minions${i}.json
+			jq ".clusters[0].end = ${endComputer}" batch_minions${i}.json > tmp.$$.json && mv tmp.$$.json batch_minions${i}.json 
+			cd ../
+			startComputer=$((${endComputer} + 1))
+	
+		done
+
+		for i in "${Frames[@]}"
+		do
+			startFrame=${i%-*}
+			endFrame=${i#*-}
+			echo 'Executing Render Command...'
+			echo
+			./batch_render.2.pl ${startFrame} ${endFrame} ${ScenePath} ${dirPath} ${layerVar} ${PWD}/tmp${queueVar}/batch_minions${i}.json -sf >> ${PWD}/tmp${queueVar}/${queueVar}LOG &
+		done
+	
+	elif [ "${queueVar}" = "$renderTroll" ]
+	then
+		echo
+		echo 'Rendering on Trolls..'
+		echo
+		for ranges in $(echo $FrameVar | sed "s/;/ /g")
+		do
+			Frames+=($ranges)
+		done
+
+
+		tmpS=$(cat "${PWD}"/batch_trolls.json | jq '.clusters[0].start')
+		tmpE=$(cat "${PWD}"/batch_trolls.json | jq '.clusters[0].end')
+
+		startComputer=${tmpS}
+		endComputer=${tmpE}
+
+		if [ "${#Frames[@]}" > "${endComputers}" ]
+		then
+			setOfQueues=1
+			echo "Creating ${#Frames[@]} set of Render Computers"
+			echo
+		elif [ "${Frames[@]}" = "${endComputer}" ]
+		then
+			setOfQueues=1
+			echo "Creating ${#Frames[@]} set of Render Computers"
+			echo
+		else
+			setOfQueues=$((${endComputer} / ${#Frames[@]}))
+			echo "Creating ${#Frames[@]} set of Render Computers"
+			echo
+
+		fi
+
+		#Create Config Files for each missing range of frames
+		mkdir -p tmp${queueVar}
+		for i in "${Frames[@]}"
+		do
+			echo 'Copying batch files...'
+			echo
+			cp -p batch_trolls.json ${PWD}/tmp${queueVar}/
+			cd tmp${queueVar}/
+			echo "Renaming batch file for missing frames ${i}"
+			echo
+			mv batch_trolls.json batch_trolls${i}.json
+			endComputer=$((${startComputer} + $((${setOfQueues} - 1))))
+			jq ".clusters[0].start = ${startComputer}" batch_trolls${i}.json > tmp.$$.json && mv tmp.$$.json batch_trolls${i}.json
+			jq ".clusters[0].end = ${endComputer}" batch_trolls${i}.json > tmp.$$.json && mv tmp.$$.json batch_trolls${i}.json 
+			cd ../
+			startComputer=$((${endComputer} + 1))
+	
+		done
+
+		for i in "${Frames[@]}"
+		do
+			startFrame=${i%-*}
+			endFrame=${i#*-}
+			echo 'Executing Render Command...'
+			echo
+			./batch_render.2.pl ${startFrame} ${endFrame} ${ScenePath} ${dirPath} ${layerVar} ${PWD}/tmp${queueVar}/batch_trolls${i}.json -sf >> ${PWD}/tmp${queueVar}/${queueVar}LOG &
+			echo
+		done
+	fi
+}
+
+#Render Commmand Function
+Render(){
+	#Find file directories
+
+	findDir=$(pwd | cut -d "/" -f 1-4)
+	ScenePath=$(find ${findDir} -name "${sceneVar}" 2>&1 | grep -v "Permission denied")
+	dirPath=$(find ${findDir} -name "${dirVar}" 2>&1 | grep -v "Permission denied")
+
+	#Setup Render Config files and Run render queue
+	
+	if [ "${choiceVar}" = "$Batch" ]
+	then
+		echo 'Running Batch Render Commmand...'
+		$(Batch)
+		echo
+	elif [ "${choiceVar}" = "$Rerender" ]
+	then
+		echo 'Running Rerender Command...'
+		$(ReRender)
+		echo
+	fi
+	
+}
+
+# Prompt to figure out if User wants to rerender frames or batch render frames
+Batch="B"
+Rerender="R"
+read -p 'Batch Render or Rerendering missing set of frames (B or R): ' choiceVar
+
+#Render Queues
+renderMinion="minion"
+renderTroll="troll"
+
+#Prompt for variables
+read -p 'Enter the Scene name (eg Test.ma): ' sceneVar
+if [ "${choiceVar}" = "$Batch" ]
+then
+	read -p 'Frame Range(eg 1000-2000): ' rangeVar
+elif [ "${choiceVar}" = "$Rerender" ]
+then
+	read -p 'Missing set of Frames(eg 1000-1005;2000-2005): ' FrameVar
+fi
+read -p 'Render Layer: ' layerVar
+read -p 'Render queue(minion or troll): ' queueVar
+read -p 'Render Directory: ' dirVar
+
+#Main Function Start
+Render
+
+echo
+echo 'Done'
+echo 
+echo "Check Log files for Error and Output Messages in ${PWD}/tmp${queueVar}"
+echo
+echo 'Exiting Script...'
+exit
+
+############## EXTRA ################
+# code to add more clusters to the config file:
+
+# jq '.clusters[1].prefix = "minion" | .clusters[1].suffix = ".fx.clemson.edu" | .clusters[1].start = 1 | .clusters[1].end = 2' batch_minions.json > tmp.$$.json && mv tmp.$$.json batch_minionsModified.json
+
+#####################################
